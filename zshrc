@@ -1,41 +1,48 @@
 # 文字コードの設定
 export LANG=ja_JP.UTF-8
 # 色付けの設定
-autoload -Uz compinit
-compinit
+autoload -U compinit
+compinit -u
 
 export LSCOLORS=gxfxcxdxbxegedabagacad
 export LS_COLORS='di=36:ln=35:so=32:pi=33:ex=31:bd=46;34:cd=43;34:su=41;30:sg=46;30:tw=42;30:ow=43;30'
-#zstyle ':completion:*' list-colors 'di=36' 'ln=35' 'so=32' 'ex=31' 'bd=46;34' 'cd=43;34'
-zstyle ':completion:*' list-colors di=34 fi=0
-
-
-setopt no_flow_control
+zstyle ':completion:*' list-colors \
+'di=36' 'ln=35' 'so=32' 'ex=31' 'bd=46;34' 'cd=43;34'
 
 # パスの設定
-PATH=/usr/local/bin:/usr/local/sbin:$HOME/.rbenv/bin:$PATH
-export PATH="/usr/local/share/npm/bin:$PATH"
-eval "$(rbenv init -)"
+PATH=/usr/local/bin:/usr/local/sbin:$HOME/.anyenv/bin:/Library/Developer/CommandLineTools/usr/bin:$PATH
+eval "$(anyenv init - zsh)"
 
-
-# For Amazon RDS
-export JAVA_HOME=/Library/Java/Home
-export EC2_HOME=/Users/kazuya/Documents/amazon/EC2Cli
-export AWS_RDS_HOME=/Users/kazuya/Documents/amazon/RDSCli
-export EC2_REGION="ap-northeast-1"
-PATH=$PATH:$JAVA_HOME/bin:$AWS_RDS_HOME/bin:$EC2_HOME/bin 
-export AWS_CREDENTIAL_FILE=/Users/kazuya/Documents/amazon/credential-file-path
+# For GoLang
+export GOPATH=$HOME/go
+export GOROOT=/usr/local/opt/go/libexec
+export PATH=$PATH:/usr/local/opt/go/libexec/bin
 
 # 関数
 find-grep () { find . -type f -print | xargs grep -n --binary-files=without-match $@ }
+propen() {
+    local current_branch_name=$(git symbolic-ref --short HEAD | xargs perl -MURI::Escape -e 'print uri_escape($ARGV[0]);')
+    git config --get remote.origin.url | sed -e "s/^.*[:\/]\(.*\/.*\).git$/http:\/\/dev1.hyakuren.org:18080\/\1\//" | sed -e "s/$/merge_requests\/${current_branch_name}/" | xargs open
+}
 
 # エイリアスの設定
 alias vi='vim'
 alias ls='ls -G'
 alias ll='ls -alG'
+alias brake='bundle exec rake'
+alias brails='bundle exec rails'
+alias brspec='bundle exec spring rspec'
+alias bforeman='bundle exec foreman'
+alias brspec-queue='TEST_QUEUE_WORKERS=2 bundle exec rspec-queue spec'
 
-# プロンプトの設定 
+# プロンプトの設定
 PROMPT='%n:%~# '
+
+# Terminal Window + Tabに現在のパスを設定
+precmd () {
+  echo -ne "\e]2;${PWD}\a"
+  echo -ne "\e]1;${PWD:t}\a"
+}
 
 # ヒストリの設定
 HISTFILE=~/.histfile
@@ -105,23 +112,22 @@ WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'
 # ファイルリスト補完でもlsと同様に色をつける｡
 zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
 
-
 fpath=(/usr/local/share/zsh-completions $fpath)
 
 #=============================
 # source zsh-syntax-highlighting
 #=============================
 if [ -f ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]; then
-source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+  source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 fi
 
 # ----- PROMPT -----
 ## PROMPT
 #PROMPT=$'[%*] → '
 ## RPROMPT
-RPROMPT=$'`branch-status-check`'
+RPROMPT=$'`branch-status-check`' # %~はpwd
 setopt prompt_subst #表示毎にPROMPTで設定されている文字列を評価する
- 
+
 # {{{ methods for RPROMPT
 # fg[color]表記と$reset_colorを使いたい
 # @see https://wiki.archlinux.org/index.php/zsh
@@ -137,10 +143,9 @@ function branch-status-check {
         if [[ -z $branchname ]]; then
             return
         fi
-	branchname='['${branchname}']'
         prefix=`get-branch-status` #色だけ返ってくる
         suffix='%{'${reset_color}'%}'
-        echo ${prefix}${branchname}${suffix}
+        echo '['${prefix}${branchname}${suffix}']'
 }
 function get-branch-name {
     # gitディレクトリじゃない場合のエラーは捨てます
@@ -166,3 +171,4 @@ function get-branch-status {
         echo ${color} # 色だけ返す
 }
 # }}}
+
